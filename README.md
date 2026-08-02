@@ -27,48 +27,71 @@
 
 ### 使用方法
 
-#### 方法一：克隆整个仓库（推荐）
+#### 直接用 curl 安装
 
-适合想同时阅读教程、查看脚本历史或以后更新脚本的用户：
+在 Debian 13 服务器上直接执行以下命令。`--accept-ts3-license` 表示你已阅读并接受 TeamSpeak 许可证：
 
 ```bash
-git clone https://github.com/YouFeng233/debian13-ssh-teamspeak3-guide.git
-cd debian13-ssh-teamspeak3-guide
-less debian13-ts3-install.sh
-sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
+curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh | sudo bash -s -- --accept-ts3-license --yes
 ```
 
-以后更新到最新版本：
+执行前可直接预演完整安装流程；该命令不会改动系统：
 
 ```bash
-cd debian13-ssh-teamspeak3-guide
-git pull --ff-only
+curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh | sudo bash -s -- --dry-run
 ```
 
-#### 方法二：只下载脚本
-
-适合不需要 Git、只想安装的用户。下载后先查看脚本内容，再执行：
+`--skip-teamspeak` 不是默认选项，只在用户**只想安装 Debian 基础工具、明确不想安装 TeamSpeak** 时使用：
 
 ```bash
-curl -fLO https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh
-less debian13-ts3-install.sh
-sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
+curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh | sudo bash -s -- --skip-teamspeak --yes
 ```
 
-也可以使用 `wget`：
+#### 如果系统没有 curl
+
+先按当前系统的包管理器安装 curl。以下命令仅用于安装 curl；本项目的一键脚本本身只支持 Debian 13。
 
 ```bash
-wget -O debian13-ts3-install.sh https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh
-less debian13-ts3-install.sh
-sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
+# Debian / Ubuntu
+sudo apt-get update && sudo apt-get install -y curl
+
+# RHEL / Rocky Linux / AlmaLinux / Fedora
+sudo dnf install -y curl
+
+# CentOS 7 或旧版 RHEL
+sudo yum install -y curl
+
+# Alpine Linux
+sudo apk add curl
+
+# Arch Linux / Manjaro
+sudo pacman -Sy --noconfirm curl
+
+# openSUSE / SUSE Linux Enterprise
+sudo zypper --non-interactive install curl
 ```
 
-不要直接执行 `curl ... | bash` 或 `wget ... -O- | bash`；先保存并检查下载的脚本，才能知道即将在 root 权限下运行的内容。
-
-执行前可先预览操作：
+如果不确定使用哪个包管理器，可运行下面这段检测命令；它会安装 curl，但脚本在非 Debian 13 系统上仍会安全退出：
 
 ```bash
-sudo bash debian13-ts3-install.sh --dry-run --skip-teamspeak
+if ! command -v curl >/dev/null 2>&1; then
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update && sudo apt-get install -y curl
+  elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y curl
+  elif command -v yum >/dev/null 2>&1; then
+    sudo yum install -y curl
+  elif command -v apk >/dev/null 2>&1; then
+    sudo apk add curl
+  elif command -v pacman >/dev/null 2>&1; then
+    sudo pacman -Sy --noconfirm curl
+  elif command -v zypper >/dev/null 2>&1; then
+    sudo zypper --non-interactive install curl
+  else
+    echo "未识别包管理器，请手动安装 curl。" >&2
+    exit 1
+  fi
+fi
 ```
 
 常用可选参数：
