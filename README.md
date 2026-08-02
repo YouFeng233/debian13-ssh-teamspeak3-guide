@@ -27,11 +27,48 @@
 
 ### 使用方法
 
-先下载或克隆仓库，阅读脚本，再执行：
+#### 方法一：克隆整个仓库（推荐）
+
+适合想同时阅读教程、查看脚本历史或以后更新脚本的用户：
+
+```bash
+git clone https://github.com/YouFeng233/debian13-ssh-teamspeak3-guide.git
+cd debian13-ssh-teamspeak3-guide
+less debian13-ts3-install.sh
+sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
+```
+
+以后更新到最新版本：
+
+```bash
+cd debian13-ssh-teamspeak3-guide
+git pull --ff-only
+```
+
+#### 方法二：只下载脚本
+
+适合不需要 Git、只想安装的用户。下载后先查看脚本内容，再执行：
+
+```bash
+curl -fLO https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh
+less debian13-ts3-install.sh
+sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
+```
+
+也可以使用 `wget`：
+
+```bash
+wget -O debian13-ts3-install.sh https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh
+less debian13-ts3-install.sh
+sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
+```
+
+不要直接执行 `curl ... | bash` 或 `wget ... -O- | bash`；先保存并检查下载的脚本，才能知道即将在 root 权限下运行的内容。
+
+执行前可先预览操作：
 
 ```bash
 sudo bash debian13-ts3-install.sh --dry-run --skip-teamspeak
-sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
 ```
 
 常用可选参数：
