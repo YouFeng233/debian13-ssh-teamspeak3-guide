@@ -7,6 +7,49 @@
 ## 教程
 
 - [Debian 13 与 TeamSpeak 3：配置归档与运维手册](outputs/Debian13-TeamSpeak-配置归档与运维手册.md)
+- [一键初始化与 TeamSpeak 3 安装脚本：`debian13-ts3-install.sh`](#debian-13-一键初始化与-teamspeak-3-安装脚本)
+
+## Debian 13 一键初始化与 TeamSpeak 3 安装脚本
+
+[`debian13-ts3-install.sh`](debian13-ts3-install.sh) 面向刚安装完成的 Debian 13 amd64 VPS。它会更新系统、安装常用管理工具和基础安全组件、启用时间同步与自动安全更新，并安装 TeamSpeak 3 Server 3.13.8。
+
+包含的软件：`ca-certificates`、`curl`、`wget`、`htop`、`nano`、`vim-tiny`、`git`、`jq`、`unzip`、`zip`、`lsof`、`dnsutils`、`rsync`、`tmux`、`fail2ban`、`nftables`、`unattended-upgrades`、`apt-listchanges`、`systemd-timesyncd`。
+
+脚本会：
+
+- 执行 `apt-get update`、`apt-get -y upgrade`、`apt-get autoremove --purge -y` 与 `apt-get clean`；
+- 为当前 SSH 监听端口配置 Fail2Ban 的 `sshd` jail，并启动 Fail2Ban；
+- 启用 `systemd-timesyncd`（NTP/SNTP 时间同步）和自动安全更新定时器；
+- 默认仅安装 nftables，**不启用、不加载 `/etc/nftables.conf` 的规则**；Fail2Ban 在识别到暴力破解时会建立临时封禁规则。
+- 创建 `teamspeak` 系统用户、`/opt/teamspeak` 安装目录和 `teamspeak.service`，启动并设置 TeamSpeak 开机自启。
+
+脚本不会修改 SSH 认证、SSH 端口、云安全组、DNS 或现有防火墙规则。
+
+### 使用方法
+
+先下载或克隆仓库，阅读脚本，再执行：
+
+```bash
+sudo bash debian13-ts3-install.sh --dry-run --skip-teamspeak
+sudo bash debian13-ts3-install.sh --accept-ts3-license --yes
+```
+
+常用可选参数：
+
+```bash
+# 设置时区并运行
+sudo bash debian13-ts3-install.sh --timezone Asia/Shanghai --accept-ts3-license --yes
+
+# 仅查看已安装组件的状态
+sudo bash debian13-ts3-install.sh --status
+
+# 仅在已经审阅 /etc/nftables.conf 后才启用 nftables
+sudo bash debian13-ts3-install.sh --enable-nftables --accept-ts3-license --yes
+```
+
+执行日志写入 `/var/log/debian13-bootstrap.log`，且权限为仅 root 可读。
+
+脚本默认安装 TeamSpeak；执行前需要明确传入 `--accept-ts3-license`。如果只需要 Debian 基础环境，可使用 `--skip-teamspeak`。脚本不会自动开放 UDP 9987、TCP 30033 或 TCP 10011，也不会自动修改云安全组、DNS、SSH 端口或认证方式。
 
 ## 你将完成什么
 
