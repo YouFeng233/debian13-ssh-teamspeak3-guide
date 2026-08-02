@@ -1,14 +1,14 @@
 ---
-title: "Debian 13 与 TeamSpeak 3：配置归档与运维手册"
+title: "Debian 13 与 TeamSpeak 3：从零安装、加固与权限配置教程"
 date: 2026-08-03
-description: "根据已脱敏的部署对话整理的服务器配置快照、权限模型、日常运维和复核清单。"
+description: "面向新手的 Debian 13、SSH 加固、TeamSpeak 3 安装、域名 DNS 和租赁频道权限配置教程。"
 ---
 
-# Debian 13 与 TeamSpeak 3：配置归档与运维手册
+# Debian 13 与 TeamSpeak 3：从零安装、加固与权限配置教程
 
-> 本文是根据已提供的脱敏对话历史整理的**配置快照**，不是对线上服务器的实时检测结果。真实 IP、域名、端口、公钥、密码、Token 均保持脱敏；变更前请先按文末清单复核实际状态。
+这篇教程带你在 Debian 13 服务器上完成 SSH 安全加固、TeamSpeak 3 安装、域名解析和租赁频道权限配置。文中的 `<...>` 都是需要替换成自己信息的占位符；不要在公开文章、截图或 GitHub 仓库中填写真实密码、私钥、Token、IP 或域名。
 
-## 1. 当前环境总览
+## 1. 开始前先了解目标
 
 | 项目 | 已记录的状态 |
 |---|---|
@@ -19,13 +19,13 @@ description: "根据已脱敏的部署对话整理的服务器配置快照、权
 | TeamSpeak 运行用户 | `teamspeak` |
 | TeamSpeak 安装目录 | `/opt/teamspeak` |
 | systemd 服务 | `teamspeak.service` |
-| TeamSpeak Server 版本 | 3.13.8（历史安装版本，升级前需重新确认官方版本和兼容性） |
+| TeamSpeak Server 版本 | 3.13.8（安装前请在官方页面确认版本与架构） |
 | 语音端口 | UDP `9987` |
 | 文件传输端口 | TCP `30033` |
 | ServerQuery | TCP `10011`；不应向全公网开放 |
 | DNS | A、AAAA 与 `_ts3._udp` SRV；Cloudflare 必须为 DNS only（灰云） |
 
-## 2. SSH 加固基线
+## 2. SSH 安全配置目标
 
 最终有效配置应满足：
 
@@ -48,7 +48,7 @@ PermitRootLogin prohibit-password
 /root/.ssh/authorized_keys    600
 ```
 
-### 任何 SSH 变更的安全顺序
+### 修改 SSH 时请按这个顺序操作
 
 1. 保持当前 SSH 会话不断开，并确保有云控制台或救援模式。
 2. 备份 `/etc/ssh`，写入或修改配置后执行 `sshd -t`。
@@ -68,7 +68,7 @@ journalctl -u ssh.service -n 100 --no-pager
 
 > `ssh -i` 必须指定客户端的私钥文件（通常没有 `.pub` 后缀）；`.pub` 是公钥，不能用于登录。
 
-## 3. TeamSpeak 服务与 DNS
+## 3. TeamSpeak 服务与域名连接
 
 ### 服务操作与检查
 
@@ -79,7 +79,7 @@ journalctl -u teamspeak.service -n 100 --no-pager
 ss -lunpt | grep -E '9987|30033|10011'
 ```
 
-TeamSpeak 预期监听 UDP `9987`、TCP `30033`；历史记录显示它已监听 `[::]:9987` 和 `[::]:30033`，因此应用层已支持 IPv6。实际是否可从公网访问，仍取决于云安全组、防火墙和 DNS。
+TeamSpeak 应监听 UDP `9987` 和 TCP `30033`。如果看到 `[::]:9987`、`[::]:30033`，表示程序也正在监听 IPv6；能否从公网连接还取决于云安全组、防火墙和 DNS 是否正确。
 
 ### DNS 记录模型
 
@@ -98,7 +98,7 @@ Cloudflare 的上述记录必须设为 `DNS only`。代理模式不能代理 Tea
 - 权限绑定到 TeamSpeak 客户端 **Identity**，不是昵称；应安全备份管理员 Identity。
 - 不把密码、Token、私钥、真实域名或公网地址放入文档、截图和代码仓库。
 
-## 4. 租赁频道：已确定的权限模型
+## 4. 租赁频道权限：你会得到什么效果
 
 目标效果：租户只能看到自己房间的成员；访客凭密码可进入；房主可管理 Guest 与房间会员，但无法改频道、无法管理房主；Server Admin 负责分配与撤销房主。
 
@@ -143,7 +143,7 @@ i_channel_needed_join_power = 0 或未设置
 - 不要给房主频道修改、删除、结构调整、名称/描述、音质/容量等权限。
 - 同名权限出现在多个频道组中，不代表它们共享数值；每个频道组各自保存 Value。
 
-## 5. 变更后的验收清单
+## 5. 配置完成后这样验收
 
 ### SSH
 
@@ -169,7 +169,7 @@ i_channel_needed_join_power = 0 或未设置
 - [ ] 房主不能创建、修改、移动或删除频道，也不能管理其他高权限频道组。
 - [ ] 用至少两个测试 Identity 完成上述测试，避免管理员自身权限掩盖问题。
 
-## 6. 建议的后续维护
+## 6. 后续维护建议
 
 1. 先做一次只读核查，记录实际 SSH 最终配置、监听端口、防火墙/安全组规则和 TeamSpeak 服务状态。
 2. 建立受保护的凭据备份：管理员 Identity、ServerQuery 密码、恢复方式；不要将其混入这份 Markdown。
@@ -178,11 +178,11 @@ i_channel_needed_join_power = 0 或未设置
 
 ---
 
-# 附录：从零复现的完整操作步骤
+# 从零开始：完整操作步骤
 
-以下内容供读者逐步执行。所有尖括号占位符必须替换为自己的值；不要把私钥、密码、Privilege Key 或真实 IP 提交到公开仓库。除本地 SSH 测试命令外，其他命令均在服务器上以 `root` 执行。
+下面按顺序操作即可。所有尖括号占位符必须替换为自己的值；不要把私钥、密码、Privilege Key 或真实 IP 提交到公开仓库。除本地 SSH 测试命令外，其他命令均在服务器上以 `root` 执行。
 
-## A. 安装 OpenSSH 并写入 root 公钥
+## 步骤 1：安装 OpenSSH 并写入 root 公钥
 
 先进入 root：
 
@@ -219,7 +219,7 @@ cp -a /etc/ssh "$SSH_BACKUP"
 printf 'SSH backup: %s\n' "$SSH_BACKUP"
 ```
 
-## B. 更改 SSH 端口并禁用密码登录
+## 步骤 2：更改 SSH 端口并禁用密码登录
 
 **不要关闭现有 SSH 会话。** 先检查是否已经有其他 `Port` 配置；避免多个端口定义导致 SSH 同时监听旧端口。
 
@@ -300,7 +300,7 @@ journalctl -u ssh.service --since '10 minutes ago' --no-pager | tail -n 100
 ssh-keygen -y -f ~/.ssh/id_ed25519 | ssh-keygen -lf -
 ```
 
-## C. 安装 TeamSpeak 3 Server
+## 步骤 3：安装 TeamSpeak 3 Server
 
 以下以历史版本 `3.13.8` 举例。下载前应在 TeamSpeak 官方发布页确认该版本仍可用及适用于自己的 CPU 架构；`amd64` 仅适用于 x86_64 服务器。
 
@@ -366,7 +366,7 @@ systemctl enable --now teamspeak.service
 systemctl --no-pager --full status teamspeak.service
 ```
 
-## D. 防火墙、日志与管理凭据
+## 步骤 4：防火墙、日志与管理员凭据
 
 在云安全组开放 UDP 9987 与 TCP 30033。若使用 UFW：
 
@@ -389,7 +389,7 @@ grep -R -E 'loginname=|password=|token=' /opt/teamspeak/logs/ | tail -n 30
 
 其中 `token=` 对应 Server Admin Privilege Key。TeamSpeak 客户端连接服务器后，进入 `Permissions → Use Privilege Key`（有的版本显示 `Use Token`），粘贴 Key，使当前 **Identity** 获得 Server Admin。密码、Key 与 Identity 备份均不得公开。
 
-## E. 配置域名 DNS
+## 步骤 5：配置域名 DNS
 
 无论域名是在哪里买的，关键都不是“注册商”本身，而是当前为该域名提供解析的 DNS 管理后台。进入该后台，添加以下三条记录：
 
@@ -436,7 +436,7 @@ ss -lntp | grep ':30033'
 
 看到 `[::]:9987` 与 `[::]:30033` 表示程序已监听 IPv6。
 
-## F. TeamSpeak 客户端：创建租赁频道权限
+## 步骤 6：在 TeamSpeak 客户端创建租赁频道权限
 
 先在客户端启用 `Tools → Options → Application → Advanced permissions system`。建立自定义频道组“房间会员”和“房主”；不要把默认 `Channel Admin` 交给租户。
 
@@ -481,7 +481,7 @@ Channel Guest
 
 最后用不带管理员权限的多个测试 Identity 验证：Guest 可凭密码进房；房主可把 Guest 加为会员并撤销会员；会员不能管理任何身份；房主不能编辑、移动、删除频道，也不能授予或撤销房主。管理员帐号不能用于这一验收，因为其高权限会掩盖实际问题。
 
-### F.1 在客户端创建和分配频道组
+### 步骤 6.1：在客户端创建和分配频道组
 
 以下操作在已启用高级权限系统的 TeamSpeak 客户端中完成：
 
@@ -493,7 +493,7 @@ Channel Guest
 
 若房主仍能管理不该管理的组，检查其服务器组、频道组和 Client Permissions 的最终有效权限，尤其是目标用户的 `i_client_needed_permission_modify_power`。不同频道组显示同名权限并不表示它们共用同一个 Value。
 
-## G. macOS 本地 DNS 排错（可选）
+## 步骤 7：macOS 本地 DNS 排错（可选）
 
 如果 `dig @1.1.1.1` 能查到记录、但 TeamSpeak 客户端或默认 `dig` 查询不到，先查看本机 DNS：
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Debian 13 server bootstrap and TeamSpeak 3 Server installer.
-# Does not modify SSH authentication, open ports, or enable nftables.service.
+# Debian 13 基础环境与 TeamSpeak 3 Server 一键安装脚本。
+# 默认不会修改 SSH 登录方式、开放端口或启用 nftables.service。
 
 set -Eeuo pipefail
 IFS=$'\n\t'
@@ -55,71 +55,70 @@ die() {
 
 run() {
   if (( DRY_RUN )); then
-    log INFO "DRY RUN: $(printf '%q ' "$@")"
+    log INFO "预演模式，不会执行：$(printf '%q ' "$@")"
     return 0
   fi
 
-  log INFO "Running: $(printf '%q ' "$@")"
+  log INFO "正在执行：$(printf '%q ' "$@")"
   "$@"
 }
 
 usage() {
   cat <<EOF
-Usage: sudo bash ${SCRIPT_NAME} [options]
+用法：sudo bash ${SCRIPT_NAME} [选项]
 
-Bootstrap a newly installed Debian 13 server with common administration and
-security packages. It does not change SSH authentication, open ports, or
-network settings. It does not enable nftables.service by default.
+适用于刚安装好的 Debian 13 amd64 服务器。脚本会更新系统、安装常用工具、
+安全组件和 TeamSpeak 3 Server。默认不会修改 SSH 登录方式、开放端口、网络
+设置，也不会启用 nftables.service。
 
-Options:
-  --yes                 Run without an interactive confirmation prompt.
-  --dry-run             Print planned actions without changing the system.
-  --status              Show the managed service and package status only.
-  --timezone ZONE       Set an IANA timezone, for example Asia/Shanghai.
-  --enable-nftables     Enable nftables.service after installation. Use only
-                        after reviewing /etc/nftables.conf.
-  --skip-teamspeak      Install the Debian server baseline only.
-  --ts-version VERSION  TeamSpeak 3 Server version (default: 3.13.8).
-  --accept-ts3-license  Confirm that you accept the TeamSpeak license and
-                        install TeamSpeak 3 Server.
-  -h, --help            Show this help text.
+选项：
+  --yes                 不显示确认问题，直接开始安装。
+  --dry-run             只显示计划执行的操作，不修改系统。
+  --status              只查看已安装组件和服务状态。
+  --timezone ZONE       设置时区，例如 Asia/Shanghai。
+  --enable-nftables     安装后启用 nftables.service；使用前请先检查
+                        /etc/nftables.conf。
+  --skip-teamspeak      只安装 Debian 基础环境，不安装 TeamSpeak。
+  --ts-version VERSION  指定 TeamSpeak 3 Server 版本（默认：3.13.8）。
+  --accept-ts3-license  确认你已接受 TeamSpeak 许可证，并安装 TeamSpeak。
+  -h, --help            显示此帮助。
 EOF
 }
 
 require_root() {
-  (( EUID == 0 )) || die "Run this script as root, for example: sudo bash ${SCRIPT_NAME} --yes"
+  (( EUID == 0 )) || die "请使用 root 权限运行，例如：sudo bash ${SCRIPT_NAME} --yes"
 }
 
 require_debian_13() {
-  [[ -r /etc/os-release ]] || die "Cannot identify the operating system."
+  [[ -r /etc/os-release ]] || die "无法识别当前操作系统。"
   # shellcheck disable=SC1091
   . /etc/os-release
   [[ "${ID:-}" == "debian" && "${VERSION_ID:-}" == "13" ]] || \
-    die "This script supports Debian 13 only; detected ${PRETTY_NAME:-unknown}."
-  command -v systemctl >/dev/null 2>&1 || die "systemd is required."
+    die "此脚本仅支持 Debian 13；当前系统是 ${PRETTY_NAME:-unknown}。"
+  command -v systemctl >/dev/null 2>&1 || die "此脚本需要 systemd。"
 }
 
 confirm() {
   (( ASSUME_YES || DRY_RUN )) && return 0
 
   cat <<'EOF'
-The script will:
-  - update installed packages;
-  - install common tools, Fail2Ban, nftables, unattended-upgrades and time sync;
-  - enable Fail2Ban, systemd-timesyncd and unattended-upgrades timers;
-  - run apt autoremove --purge and apt clean;
-  - install TeamSpeak 3 Server unless --skip-teamspeak is used.
+脚本将会：
+  - 更新已安装的软件包；
+  - 安装常用工具、Fail2Ban、nftables、自动更新和时间同步；
+  - 启用 Fail2Ban、systemd-timesyncd 和自动更新定时器；
+  - 运行 apt autoremove --purge 和 apt clean；
+  - 除非使用 --skip-teamspeak，否则安装 TeamSpeak 3 Server。
 
-It will not change SSH settings, open ports, or enable nftables.service.
-Fail2Ban may create temporary ban rules after failed login attempts.
+脚本不会修改 SSH 设置、开放端口或启用 nftables.service。Fail2Ban 会在
+有人多次登录失败后建立临时封禁规则。
 EOF
-  read -r -p "Continue? [y/N] " answer
-  [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || die "Cancelled."
+  read -r -p "是否继续？[y/N] " answer
+  [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || die "已取消。"
 }
 
 validate_requested_install() {
   if (( INSTALL_TEAMSPEAK && ! DRY_RUN )) && [[ ! -x "$TS_DIR/ts3server" ]] && (( ! ACCEPT_TS3_LICENSE )); then
-    die "TeamSpeak 3 installation requires --accept-ts3-license. Read the license first, or use --skip-teamspeak."
+    die "安装 TeamSpeak 3 需要 --accept-ts3-license；请先阅读许可证，或使用 --skip-teamspeak。"
   fi
 }
 
@@ -131,7 +130,7 @@ cleanup() {
 
 configure_timezone() {
   [[ -n "$TIMEZONE" ]] || return 0
-  [[ -e "/usr/share/zoneinfo/$TIMEZONE" ]] || die "Unknown timezone: $TIMEZONE"
+  [[ -e "/usr/share/zoneinfo/$TIMEZONE" ]] || die "未知时区：$TIMEZONE"
   run timedatectl set-timezone "$TIMEZONE"
 }
 
@@ -155,7 +154,7 @@ configure_fail2ban() {
   if [[ "$ssh_port" =~ ^[0-9]+$ ]]; then
     run install -d -m 0755 /etc/fail2ban/jail.d
     if (( DRY_RUN )); then
-      log INFO "DRY RUN: would configure Fail2Ban sshd jail for port $ssh_port"
+      log INFO "预演模式：将为 SSH 端口 $ssh_port 配置 Fail2Ban。"
     else
       cat > /etc/fail2ban/jail.d/sshd.local <<EOF
 [sshd]
@@ -168,7 +167,7 @@ bantime = 1h
 EOF
     fi
   else
-    log WARN "Could not determine a numeric SSH port; leaving the sshd jail at package defaults."
+    log WARN "无法识别 SSH 端口；将保留 Fail2Ban 的默认 sshd 设置。"
   fi
 
   run systemctl enable --now fail2ban.service
@@ -178,7 +177,7 @@ EOF
 configure_unattended_upgrades() {
   run install -d -m 0755 /etc/apt/apt.conf.d
   if (( DRY_RUN )); then
-    log INFO "DRY RUN: would write /etc/apt/apt.conf.d/20auto-upgrades"
+    log INFO "预演模式：将写入 /etc/apt/apt.conf.d/20auto-upgrades。"
   else
     cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
 APT::Periodic::Update-Package-Lists "1";
@@ -193,19 +192,19 @@ install_teamspeak() {
   local archive_name ts_url extracted_dir
 
   (( INSTALL_TEAMSPEAK )) || {
-    log INFO "Skipping TeamSpeak 3 Server installation."
+    log INFO "已跳过 TeamSpeak 3 Server 安装。"
     return 0
   }
 
-  [[ "$(dpkg --print-architecture)" == "amd64" ]] || die "TeamSpeak 3 binary installer currently supports amd64 only."
+  [[ "$(dpkg --print-architecture)" == "amd64" ]] || die "当前 TeamSpeak 3 二进制安装包仅支持 amd64 架构。"
 
   if (( DRY_RUN )); then
-    log INFO "DRY RUN: would download TeamSpeak 3 Server ${TS_VERSION} to $TS_DIR and create teamspeak.service"
+    log INFO "预演模式：将下载 TeamSpeak 3 Server ${TS_VERSION} 到 $TS_DIR，并创建 teamspeak.service。"
     return 0
   fi
 
   if [[ -x "$TS_DIR/ts3server" ]]; then
-    log INFO "Existing TeamSpeak installation found at $TS_DIR; skipping download."
+    log INFO "在 $TS_DIR 找到已有 TeamSpeak 安装，跳过下载。"
   else
     id "$TS_USER" >/dev/null 2>&1 || run useradd \
       --system \
@@ -221,17 +220,17 @@ install_teamspeak() {
 
     run curl --fail --location --proto '=https' --tlsv1.2 "$ts_url" --output "$TEMP_DIR/$archive_name"
     run tar -xjf "$TEMP_DIR/$archive_name" -C "$TEMP_DIR"
-    [[ -d "$extracted_dir" ]] || die "Unexpected TeamSpeak archive layout."
+    [[ -d "$extracted_dir" ]] || die "下载的 TeamSpeak 压缩包目录结构不符合预期。"
     run install -d -m 0750 -o "$TS_USER" -g "$TS_USER" "$TS_DIR"
     run cp -a "$extracted_dir/." "$TS_DIR/"
     run touch "$TS_DIR/.ts3server_license_accepted"
     run chown -R "$TS_USER:$TS_USER" "$TS_DIR"
     run chmod 0750 "$TS_DIR/ts3server" "$TS_DIR/ts3server_startscript.sh" "$TS_DIR/ts3server_minimal_runscript.sh"
-    log INFO "TeamSpeak 3 Server ${TS_VERSION} installed at $TS_DIR."
+    log INFO "TeamSpeak 3 Server ${TS_VERSION} 已安装到 $TS_DIR。"
   fi
 
   if (( DRY_RUN )); then
-    log INFO "DRY RUN: would write /etc/systemd/system/teamspeak.service"
+    log INFO "预演模式：将写入 /etc/systemd/system/teamspeak.service。"
   else
     cat > /etc/systemd/system/teamspeak.service <<EOF
 [Unit]
@@ -261,27 +260,27 @@ EOF
 
   run systemctl daemon-reload
   run systemctl enable --now teamspeak.service
-  log INFO "TeamSpeak listens on UDP 9987 and TCP 30033. Open only the required ports in your cloud firewall after reviewing your network policy."
-  log WARN "Initial ServerQuery credentials and Privilege Key are sensitive. View them locally in $TS_DIR/logs; do not copy them into shell history, chat, or GitHub."
+  log INFO "TeamSpeak 使用 UDP 9987 和 TCP 30033。请按自己的网络策略，在云安全组或防火墙中只开放需要的端口。"
+  log WARN "首次启动生成的 ServerQuery 密码和 Privilege Key 属于敏感信息。请仅在 $TS_DIR/logs 本地查看，切勿复制到命令历史、聊天记录或 GitHub。"
 }
 
 show_status() {
-  printf '\n== Operating system ==\n'
+  printf '\n== 操作系统 ==\n'
   cat /etc/os-release
 
-  printf '\n== Managed packages ==\n'
+  printf '\n== 已管理的软件包 ==\n'
   dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\t${Version}\n' "${BASE_PACKAGES[@]}" 2>/dev/null || true
 
-  printf '\n== Services ==\n'
+  printf '\n== 服务状态 ==\n'
   systemctl --no-pager --full status fail2ban.service systemd-timesyncd.service 2>/dev/null || true
 
-  printf '\n== Time synchronization ==\n'
+  printf '\n== 时间同步 ==\n'
   timedatectl status || true
 
-  printf '\n== Automatic updates ==\n'
+  printf '\n== 自动更新 ==\n'
   systemctl --no-pager status apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
 
-  printf '\n== Fail2Ban ==\n'
+  printf '\n== Fail2Ban 防护 ==\n'
   fail2ban-client ping 2>/dev/null || true
 
   printf '\n== nftables ==\n'
@@ -301,7 +300,7 @@ parse_args() {
       --status) STATUS_ONLY=1 ;;
       --timezone)
         shift
-        (( $# )) || die "--timezone requires a value."
+        (( $# )) || die "--timezone 需要提供时区值。"
         TIMEZONE="$1"
         ;;
       --enable-nftables) ENABLE_NFTABLES=1 ;;
@@ -309,15 +308,15 @@ parse_args() {
       --accept-ts3-license) ACCEPT_TS3_LICENSE=1 ;;
       --ts-version)
         shift
-        (( $# )) || die "--ts-version requires a value."
+        (( $# )) || die "--ts-version 需要提供版本号。"
         TS_VERSION="$1"
-        [[ "$TS_VERSION" =~ ^[0-9]+(\.[0-9]+)+$ ]] || die "Invalid TeamSpeak version: $TS_VERSION"
+        [[ "$TS_VERSION" =~ ^[0-9]+(\.[0-9]+)+$ ]] || die "无效的 TeamSpeak 版本号：$TS_VERSION"
         ;;
       -h|--help)
         usage
         exit 0
         ;;
-      *) die "Unknown option: $1" ;;
+      *) die "未知选项：$1" ;;
     esac
     shift
   done
@@ -351,10 +350,10 @@ main() {
   install_teamspeak
 
   if (( ENABLE_NFTABLES )); then
-    log WARN "Enabling nftables can load existing rules from /etc/nftables.conf. Review that file before using this option."
+    log WARN "启用 nftables 可能会加载 /etc/nftables.conf 中已有的规则；使用此选项前请先检查该文件。"
     run systemctl enable --now nftables.service
   else
-    log INFO "nftables was installed but not enabled. Fail2Ban can still add its own temporary ban rules. Use --enable-nftables only after reviewing /etc/nftables.conf."
+    log INFO "nftables 已安装但未启用。Fail2Ban 仍可添加自己的临时封禁规则；只有检查过 /etc/nftables.conf 后才使用 --enable-nftables。"
   fi
 
   run apt-get autoremove --purge -y
@@ -362,7 +361,7 @@ main() {
 
   if (( ! DRY_RUN )); then
     show_status
-    log INFO "Bootstrap complete. Log: $LOG_FILE"
+    log INFO "安装完成。运行日志：$LOG_FILE"
   fi
 }
 
