@@ -4,6 +4,8 @@
 
 所有公网地址、域名、端口、密钥、密码和 Token 都以占位符表示；请替换为自己的值，且不要将敏感信息提交到公开仓库。
 
+[English README](README.en.md)
+
 ## 从这里开始
 
 - [完整教程：SSH 加固、域名、IPv6 与频道权限](outputs/Debian13-TeamSpeak-配置归档与运维手册.md)
@@ -29,16 +31,22 @@
 
 #### 直接用 curl 安装
 
-在 Debian 13 服务器上直接执行以下命令。`--accept-ts3-license` 表示你已阅读并接受 TeamSpeak 许可证：
+以下命令适用于已经通过 `root` 登录 Debian 13 服务器的用户。`--accept-ts3-license` 表示你已阅读并接受 TeamSpeak 许可证：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh | bash -s -- --accept-ts3-license --yes
+```
+
+如果你使用的是普通用户而不是 root，只需在 `bash` 前加入 `sudo`：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh | sudo bash -s -- --accept-ts3-license --yes
 ```
 
-执行前可直接预演完整安装流程；该命令不会改动系统：
+执行前可直接预演完整安装流程；该命令不会改动系统。root 用户执行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh | sudo bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-guide/main/debian13-ts3-install.sh | bash -s -- --dry-run
 ```
 
 `--skip-teamspeak` 不是默认选项，只在用户**只想安装 Debian 基础工具、明确不想安装 TeamSpeak** 时使用：
@@ -52,41 +60,43 @@ curl -fsSL https://raw.githubusercontent.com/YouFeng233/debian13-ssh-teamspeak3-
 先按当前系统的包管理器安装 curl。以下命令仅用于安装 curl；本项目的一键脚本本身只支持 Debian 13。
 
 ```bash
-# Debian / Ubuntu
-sudo apt-get update && sudo apt-get install -y curl
+# Debian / Ubuntu（root 用户）
+apt-get update && apt-get install -y curl
 
-# RHEL / Rocky Linux / AlmaLinux / Fedora
-sudo dnf install -y curl
+# RHEL / Rocky Linux / AlmaLinux / Fedora（root 用户）
+dnf install -y curl
 
-# CentOS 7 或旧版 RHEL
-sudo yum install -y curl
+# CentOS 7 或旧版 RHEL（root 用户）
+yum install -y curl
 
-# Alpine Linux
-sudo apk add curl
+# Alpine Linux（root 用户）
+apk add curl
 
-# Arch Linux / Manjaro
-sudo pacman -Sy --noconfirm curl
+# Arch Linux / Manjaro（root 用户）
+pacman -Sy --noconfirm curl
 
-# openSUSE / SUSE Linux Enterprise
-sudo zypper --non-interactive install curl
+# openSUSE / SUSE Linux Enterprise（root 用户）
+zypper --non-interactive install curl
 ```
+
+普通用户执行上面任一安装命令时，在命令前加 `sudo` 即可。
 
 如果不确定使用哪个包管理器，可运行下面这段检测命令；它会安装 curl，但脚本在非 Debian 13 系统上仍会安全退出：
 
 ```bash
 if ! command -v curl >/dev/null 2>&1; then
   if command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get update && sudo apt-get install -y curl
+    apt-get update && apt-get install -y curl
   elif command -v dnf >/dev/null 2>&1; then
-    sudo dnf install -y curl
+    dnf install -y curl
   elif command -v yum >/dev/null 2>&1; then
-    sudo yum install -y curl
+    yum install -y curl
   elif command -v apk >/dev/null 2>&1; then
-    sudo apk add curl
+    apk add curl
   elif command -v pacman >/dev/null 2>&1; then
-    sudo pacman -Sy --noconfirm curl
+    pacman -Sy --noconfirm curl
   elif command -v zypper >/dev/null 2>&1; then
-    sudo zypper --non-interactive install curl
+    zypper --non-interactive install curl
   else
     echo "未识别包管理器，请手动安装 curl。" >&2
     exit 1
@@ -97,14 +107,14 @@ fi
 常用可选参数：
 
 ```bash
-# 设置时区并运行
-sudo bash debian13-ts3-install.sh --timezone Asia/Shanghai --accept-ts3-license --yes
+# root 用户：设置时区并运行
+bash debian13-ts3-install.sh --timezone Asia/Shanghai --accept-ts3-license --yes
 
-# 仅查看已安装组件的状态
-sudo bash debian13-ts3-install.sh --status
+# root 用户：仅查看已安装组件的状态
+bash debian13-ts3-install.sh --status
 
-# 仅在已经审阅 /etc/nftables.conf 后才启用 nftables
-sudo bash debian13-ts3-install.sh --enable-nftables --accept-ts3-license --yes
+# root 用户：仅在已经审阅 /etc/nftables.conf 后才启用 nftables
+bash debian13-ts3-install.sh --enable-nftables --accept-ts3-license --yes
 ```
 
 执行日志写入 `/var/log/debian13-bootstrap.log`，且权限为仅 root 可读。

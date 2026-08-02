@@ -65,7 +65,9 @@ run() {
 
 usage() {
   cat <<EOF
-用法：sudo bash ${SCRIPT_NAME} [选项]
+用法：
+  root 用户：bash ${SCRIPT_NAME} [选项]
+  普通用户：sudo bash ${SCRIPT_NAME} [选项]
 
 适用于刚安装好的 Debian 13 amd64 服务器。脚本会更新系统、安装常用工具、
 安全组件和 TeamSpeak 3 Server。默认不会修改 SSH 登录方式、开放端口、网络
@@ -86,7 +88,7 @@ EOF
 }
 
 require_root() {
-  (( EUID == 0 )) || die "请使用 root 权限运行，例如：sudo bash ${SCRIPT_NAME} --yes"
+  (( EUID == 0 )) || die "请使用 root 权限运行：root 用户直接执行 bash ${SCRIPT_NAME} --yes；普通用户使用 sudo bash ${SCRIPT_NAME} --yes。"
 }
 
 require_debian_13() {
